@@ -1,1 +1,815 @@
 # ExpenseTracker
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the sans-serif font and overall layout */
+        body {
+            font-family: sans-serif; /* Changed font to generic sans-serif */
+            /* Applying a subtle, multi-color background gradient for an aesthetic look */
+            @apply bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 flex items-center justify-center min-h-screen p-6;
+        }
+        .container {
+            /* Enhanced container styling with more padding, deeper shadow, and larger rounded corners */
+            @apply bg-white shadow-2xl rounded-3xl p-10 max-w-5xl w-full flex flex-col lg:flex-row gap-10 border border-gray-200; /* Added subtle border */
+        }
+        .table-section {
+            /* Refined table section styling with subtle background, shadow, and rounded corners */
+            @apply flex-1 p-7 bg-white rounded-2xl shadow-lg border border-gray-200; /* Added subtle border */
+        }
+        .input-field {
+            /* Input field styling with indigo focus ring and slightly rounded corners */
+            @apply px-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full; /* Stronger border */
+        }
+        .btn {
+            /* General button styling with increased padding, rounded corners, and a border */
+            @apply px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 ease-in-out transform hover:scale-105 border; /* Added border */
+        }
+        .btn-primary {
+            /* Primary button using a deep indigo color with a matching border */
+            @apply bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg border-indigo-700;
+        }
+        .btn-secondary {
+            /* Secondary button with lighter background, indigo text, and a subtle border */
+            @apply bg-gray-200 text-indigo-800 hover:bg-gray-300 shadow-sm hover:shadow-md border-gray-400;
+        }
+        .table-header {
+            /* Table header with primary accent color and rounded top corners */
+            @apply bg-indigo-600 text-white py-3 px-5 rounded-t-xl font-bold text-lg; /* Increased padding and font size */
+        }
+        .table-row-item {
+            /* Table row item styling with consistent padding and bottom border */
+            @apply py-3 px-5 border-b border-gray-200 text-gray-800; /* Increased padding */
+        }
+        /* Custom scrollbar for table containers */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Adjusted grid columns for daily history to fit content */
+        .grid-cols-2 {
+            grid-template-columns: max-content 1fr; /* Date column fits content, amount takes rest */
+        }
+        /* Adjusted grid columns for breakdown table to fit content */
+        .grid-cols-2-breakdown {
+            grid-template-columns: max-content 1fr; /* Category column fits content, amount takes rest */
+        }
+        /* Style for the month select dropdown */
+        .filter-select {
+            /* Filter dropdown with indigo focus ring and a border */
+            @apply block w-full px-4 py-2.5 border border-gray-400 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base; /* Increased padding and font size, stronger border */
+        }
+        /* Category tags styling */
+        .category-tag {
+            @apply inline-flex items-center px-3.5 py-1.5 rounded-full text-sm font-medium bg-indigo-200 text-indigo-900; /* Slightly darker indigo for better contrast */
+        }
+        .remove-category-btn {
+            @apply ml-2 -mr-0.5 h-5 w-5 inline-flex items-center justify-center rounded-full text-indigo-700 hover:bg-indigo-300 hover:text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500; /* Darker text for remove btn */
+        }
+        /* Filter button containers */
+        .filter-buttons-container {
+            @apply p-4 flex flex-wrap gap-2 bg-gray-100 rounded-t-xl mb-2 border border-gray-200; /* Added border */
+        }
+        .filter-dropdown-container {
+            @apply px-4 pb-4 pt-0 bg-gray-100 rounded-b-xl mb-4 border-l border-r border-b border-gray-200; /* Added border */
+        }
+        /* Total row styling */
+        .total-row {
+            /* Ensure total rows follow the new grid structure */
+            @apply grid table-row-item font-bold bg-indigo-50 mt-2 rounded-b-lg; /* Light indigo background for totals */
+            grid-template-columns: max-content 1fr; /* Match daily history grid */
+        }
+        .total-row-breakdown {
+            /* Ensure total rows follow the new grid structure */
+            @apply grid table-row-item font-bold bg-indigo-50 mt-2 rounded-b-lg;
+            grid-template-columns: max-content 1fr; /* Match breakdown grid */
+        }
+        /* Styles for the confirmation modal */
+        .modal-overlay {
+            @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+        }
+        .modal-content {
+            @apply bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full border border-gray-300;
+        }
+        .modal-buttons {
+            @apply mt-6 flex justify-center gap-4;
+        }
+        /* Disabled state for the entire daily expenses section */
+        .daily-expenses-disabled {
+            pointer-events: none; /* Prevents clicks on all children */
+            opacity: 0.6; /* Visual cue for disabled */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Table 1: Daily Expenses -->
+        <div id="dailyExpensesSection" class="table-section"> <!-- Added ID for easier targeting -->
+            <h2 class="text-3xl font-extrabold mb-5 text-gray-900">Daily Expenses</h2>
+
+            <div id="expenseInputs" class="mb-5 space-y-4 max-h-64 overflow-y-auto pr-3">
+                <!-- Initial expense row will be added by JavaScript -->
+            </div>
+
+            <button id="addExpenseBtn" class="btn btn-secondary w-full mt-5 flex items-center justify-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                <span>Add New Expense</span>
+            </button>
+
+            <div class="mt-8 pt-5 border-t border-gray-200 flex justify-between items-center text-xl font-bold text-gray-900">
+                <span>Total Expenses:</span>
+                <span id="totalExpenses">₱0.00</span>
+            </div>
+
+            <div class="mt-6 flex flex-col sm:flex-row gap-4">
+                <button id="saveDraftBtn" class="btn btn-secondary flex-1">Save</button>
+                <button id="submitBtn" class="btn btn-primary flex-1">Submit</button>
+                <button id="refreshBtn" class="btn btn-secondary flex-1">Refresh</button>
+            </div>
+
+            <!-- Category Management Section -->
+            <div class="mt-10 pt-6 border-t border-gray-200">
+                <h3 class="text-2xl font-bold mb-4 text-gray-800">Manage Expense Categories</h3>
+                <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                    <input type="text" id="newCategoryInput" class="input-field flex-1" placeholder="New Category Name">
+                    <button id="addCategoryBtn" class="btn btn-primary w-full sm:w-auto">Add Category</button>
+                </div>
+                <div id="categoryList" class="flex flex-wrap gap-2 text-sm max-h-32 overflow-y-auto pr-2">
+                    </div>
+                <div class="mt-6">
+                    <button id="clearAllDataBtn" class="btn btn-secondary w-full">Clear All Saved Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Daily Expense History and Monthly Category Breakdown -->
+        <div class="flex-1 flex flex-col gap-10">
+            <!-- Daily Expense History -->
+            <div class="table-section">
+                <h2 class="text-3xl font-extrabold mb-5 text-gray-900">Daily Expense History</h2>
+                <!-- Filters for Daily Expense History -->
+                <div id="dailyHistoryYearFilterButtons" class="filter-buttons-container"></div>
+                <div class="filter-dropdown-container">
+                    <label for="dailyHistoryMonthSelect" class="block text-sm font-medium text-gray-700 sr-only">Select Month</label>
+                    <select id="dailyHistoryMonthSelect" class="mt-1 filter-select">
+                        </select>
+                </div>
+                <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+                    <div class="grid grid-cols-2 table-header">
+                        <div class="text-left">Date</div>
+                        <div class="text-right">Total Expense</div>
+                    </div>
+                    <div id="expenseHistory" class="max-h-80 overflow-y-auto pr-2">
+                        <div class="py-4 text-center text-gray-500" id="noHistoryMessage">No history yet. Submit an expense!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Category Breakdown Section -->
+            <div class="table-section">
+                <h2 class="text-3xl font-extrabold mb-5 text-gray-900">Monthly Category Breakdown</h2>
+                <!-- Year filter buttons -->
+                <div id="breakdownYearFilterButtons" class="filter-buttons-container"></div>
+                <!-- Month filter dropdown -->
+                <div class="filter-dropdown-container">
+                    <label for="breakdownMonthSelect" class="block text-sm font-medium text-gray-700 sr-only">Select Month</label>
+                    <select id="breakdownMonthSelect" class="mt-1 filter-select">
+                        </select>
+                </div>
+
+                <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+                    <div id="monthlyCategoryBreakdownContent" class="overflow-x-auto overflow-y-auto max-h-80">
+                        </div>
+                    <div class="py-4 text-center text-gray-500" id="noMonthlyBreakdownMessage">No detailed breakdown yet for the selected filters.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const expenseInputsDiv = document.getElementById('expenseInputs');
+        const totalExpensesSpan = document.getElementById('totalExpenses');
+        const addExpenseBtn = document.getElementById('addExpenseBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const saveDraftBtn = document.getElementById('saveDraftBtn');
+        const expenseHistoryDiv = document.getElementById('expenseHistory');
+        const noHistoryMessage = document.getElementById('noHistoryMessage');
+        const newCategoryInput = document.getElementById('newCategoryInput');
+        const addCategoryBtn = document.getElementById('addCategoryBtn');
+        const categoryListDiv = document.getElementById('categoryList');
+        const monthlyCategoryBreakdownContentDiv = document.getElementById('monthlyCategoryBreakdownContent');
+        const noMonthlyBreakdownMessage = document.getElementById('noMonthlyBreakdownMessage');
+        const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+
+        // References for Daily History filters
+        const dailyHistoryYearFilterButtonsDiv = document.getElementById('dailyHistoryYearFilterButtons');
+        const dailyHistoryMonthSelect = document.getElementById('dailyHistoryMonthSelect');
+
+        // References for Breakdown filters
+        const breakdownYearFilterButtonsDiv = document.getElementById('breakdownYearFilterButtons');
+        const breakdownMonthSelect = document.getElementById('breakdownMonthSelect');
+
+        // Reference to the entire daily expenses section wrapper
+        const dailyExpensesSection = document.getElementById('dailyExpensesSection');
+
+        // Global variables for filter state for EACH table
+        let dailyHistoryFilterYear = null;
+        let dailyHistoryFilterMonth = null;
+
+        let breakdownFilterYear = null;
+        let breakdownFilterMonth = null;
+
+        // Data storage for current expenses, history, and categories
+        let currentExpenses = []; // Stores { type: string, amount: number }
+
+        // expenseHistory will be loaded from local storage, or initialized as empty
+        let expenseHistory = [];
+
+        // Initial set of expense categories - now empty
+        let expenseCategories = [];
+
+        // Keys for local storage
+        const LOCAL_STORAGE_EXPENSE_HISTORY_KEY = 'expenseTrackerHistory';
+        const LOCAL_STORAGE_DAILY_DRAFT_KEY = 'dailyExpensesDraft';
+        const LOCAL_STORAGE_CATEGORIES_KEY = 'expenseCategories';
+
+
+        // Helper function to format currency
+        function formatCurrency(amount) {
+            // Ensure amount is a number before formatting
+            const numAmount = parseFloat(amount);
+            if (isNaN(numAmount)) {
+                return '₱0.00'; // Return default for invalid numbers
+            }
+            return `₱${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Function to add a new expense input row to Table 1
+        function addExpenseRow(expenseType = '', amount = '') {
+            const rowId = `expense-row-${Date.now()}`; // Unique ID for the row
+            const rowDiv = document.createElement('div');
+            rowDiv.id = rowId;
+            rowDiv.className = 'flex gap-3 items-center';
+
+            // Generate options for the select dropdown
+            let optionsHtml = expenseCategories.map(cat =>
+                `<option value="${cat}" ${expenseType === cat ? 'selected' : ''}>${cat}</option>`
+            ).join('');
+
+            rowDiv.innerHTML = `
+                <select class="expense-type input-field">
+                    <option value="">Select Type</option> ${optionsHtml}
+                </select>
+                <input type="number" step="0.01" class="expense-amount input-field" placeholder="Amount (PHP)" value="${amount}">
+                <button type="button" class="remove-row-btn text-red-500 hover:text-red-700 transition-colors duration-200" aria-label="Remove expense row">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            `;
+            expenseInputsDiv.appendChild(rowDiv);
+
+            // Add event listeners for new inputs
+            const amountInput = rowDiv.querySelector('.expense-amount');
+            amountInput.addEventListener('input', calculateTotal);
+            rowDiv.querySelector('.expense-type').addEventListener('change', calculateTotal);
+
+            const removeBtn = rowDiv.querySelector('.remove-row-btn');
+            removeBtn.addEventListener('click', () => {
+                rowDiv.remove();
+                calculateTotal();
+                if (expenseInputsDiv.children.length === 0) {
+                    addExpenseRow();
+                }
+            });
+            // Crucially, ensure new elements are interactive by default (not disabled by a stale state)
+            // The dailyExpensesSection class will handle global disabling if a modal is open.
+            rowDiv.querySelectorAll('select, input, button').forEach(el => {
+                el.disabled = false;
+            });
+        }
+
+        // Function to update all existing expense type dropdowns after category changes
+        function updateAllExpenseTypeDropdowns() {
+            const expenseTypeSelects = document.querySelectorAll('.expense-type');
+            expenseTypeSelects.forEach(selectElement => {
+                const currentValue = selectElement.value;
+                selectElement.innerHTML = '<option value="">Select Type</option>';
+
+                expenseCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    selectElement.appendChild(option);
+                });
+
+                if (expenseCategories.includes(currentValue)) {
+                    selectElement.value = currentValue;
+                } else {
+                    selectElement.value = '';
+                }
+            });
+        }
+
+        // Function to calculate and display the total expenses from Table 1
+        function calculateTotal() {
+            let total = 0;
+            const expenseRows = document.querySelectorAll('#expenseInputs > div');
+            currentExpenses = [];
+
+            expenseRows.forEach(row => {
+                const typeSelect = row.querySelector('.expense-type');
+                const amountInput = row.querySelector('.expense-amount');
+
+                const type = typeSelect ? typeSelect.value : '';
+                const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+
+                total += amount;
+
+                if (type && amount !== 0) {
+                    currentExpenses.push({ type: type, amount: amount });
+                }
+            });
+            totalExpensesSpan.textContent = formatCurrency(total);
+        }
+
+        // Function to render the expense history in Table 2 (now with filters and total)
+        function renderExpenseHistory(filterYear = null, filterMonth = null) {
+            expenseHistoryDiv.innerHTML = '';
+
+            let filteredHistory = expenseHistory;
+
+            if (filterYear) {
+                filteredHistory = filteredHistory.filter(entry => {
+                    const [, , entryYear] = entry.date.split('/');
+                    return entryYear === filterYear;
+                });
+            }
+
+            if (filterMonth) {
+                filteredHistory = filteredHistory.filter(entry => {
+                    const [monthNum, , entryYear] = entry.date.split('/');
+                    const dateObj = new Date(parseInt(entryYear), parseInt(monthNum) - 1, 1);
+                    const entryMonthName = dateObj.toLocaleDateString('en-US', { month: 'long' });
+                    return entryMonthName === filterMonth;
+                });
+            }
+
+            if (filteredHistory.length === 0) {
+                noHistoryMessage.style.display = 'block';
+                expenseHistoryDiv.appendChild(noHistoryMessage);
+            } else {
+                noHistoryMessage.style.display = 'none';
+                let historyTotal = 0;
+                filteredHistory.forEach(entry => {
+                    const historyRow = document.createElement('div');
+                    historyRow.className = 'grid grid-cols-2 table-row-item';
+                    historyRow.innerHTML = `
+                        <div>${entry.date}</div>
+                        <div class="text-right">${formatCurrency(entry.total)}</div>
+                    `;
+                    expenseHistoryDiv.appendChild(historyRow);
+                    historyTotal += entry.total;
+                });
+
+                const totalRow = document.createElement('div');
+                totalRow.className = 'total-row';
+                totalRow.innerHTML = `
+                    <div class="text-left">TOTAL</div>
+                    <div class="text-right">${formatCurrency(historyTotal)}</div>
+                `;
+                expenseHistoryDiv.appendChild(totalRow);
+            }
+        }
+
+        // Function to render and manage the list of categories
+        function renderCategoryList() {
+            categoryListDiv.innerHTML = '';
+            if (expenseCategories.length === 0) {
+                categoryListDiv.innerHTML = '<span class="text-gray-500">No categories added yet.</span>';
+                return;
+            }
+            expenseCategories.forEach(cat => {
+                const categorySpan = document.createElement('span');
+                categorySpan.className = 'category-tag';
+                categorySpan.innerHTML = `
+                    ${cat}
+                    <button type="button" class="remove-category-btn" data-category="${cat}" aria-label="Remove category ${cat}">
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                `;
+                categoryListDiv.appendChild(categorySpan);
+            });
+
+            document.querySelectorAll('.remove-category-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const categoryToRemove = event.currentTarget.dataset.category;
+                    expenseCategories = expenseCategories.filter(cat => cat !== categoryToRemove);
+                    localStorage.setItem(LOCAL_STORAGE_CATEGORIES_KEY, JSON.stringify(expenseCategories));
+                    renderCategoryList();
+                    updateAllExpenseTypeDropdowns();
+                    renderMonthlyCategoryBreakdown(breakdownFilterYear, breakdownFilterMonth);
+                    renderExpenseHistory(dailyHistoryFilterYear, dailyHistoryFilterMonth);
+                });
+            });
+        }
+
+        // Function to get unique years from expenseHistory (used by all filters)
+        function getUniqueYearsFromHistory() {
+            const years = new Set();
+            expenseHistory.forEach(entry => {
+                const [, , year] = entry.date.split('/');
+                years.add(year);
+            });
+            return Array.from(years).sort();
+        }
+
+        // Function to get unique months for a given year from expenseHistory
+        function getUniqueMonthsForYear(year) {
+            const months = new Set();
+            expenseHistory.forEach(entry => {
+                const [monthNum, , entryYear] = entry.date.split('/');
+                if (year === null || entryYear === year) {
+                    const dateObj = new Date(parseInt(entryYear), parseInt(monthNum) - 1, 1);
+                    months.add(dateObj.toLocaleDateString('en-US', { month: 'long' }));
+                }
+            });
+            const sortedMonths = Array.from(months).sort((a, b) => {
+                return new Date(`1 ${a} 2000`).getMonth() - new Date(`1 ${b} 2000`).getMonth();
+            });
+            return sortedMonths;
+        }
+
+        // --- Filter rendering functions (per table) ---
+        function renderDailyHistoryYearButtons() {
+            renderYearButtons(dailyHistoryYearFilterButtonsDiv, dailyHistoryFilterYear, (year) => {
+                dailyHistoryFilterYear = year;
+                dailyHistoryFilterMonth = null;
+                renderDailyHistoryMonthSelect(dailyHistoryFilterYear);
+                renderDailyHistoryYearButtons();
+                renderExpenseHistory(dailyHistoryFilterYear, dailyHistoryFilterMonth);
+            });
+        }
+
+        function renderDailyHistoryMonthSelect(year) {
+            renderMonthSelect(dailyHistoryMonthSelect, year, dailyHistoryFilterMonth, (month) => {
+                dailyHistoryFilterMonth = month;
+                renderDailyHistoryMonthSelect(dailyHistoryFilterYear);
+                renderExpenseHistory(dailyHistoryFilterYear, dailyHistoryFilterMonth);
+            });
+        }
+
+        function renderBreakdownYearButtons() {
+            renderYearButtons(breakdownYearFilterButtonsDiv, breakdownFilterYear, (year) => {
+                breakdownFilterYear = year;
+                breakdownFilterMonth = null;
+                renderBreakdownMonthSelect(breakdownFilterYear);
+                renderBreakdownYearButtons();
+                renderMonthlyCategoryBreakdown(breakdownFilterYear, breakdownFilterMonth);
+            });
+        }
+
+        function renderBreakdownMonthSelect(year) {
+            renderMonthSelect(breakdownMonthSelect, year, breakdownFilterMonth, (month) => {
+                breakdownFilterMonth = month;
+                renderBreakdownMonthSelect(breakdownFilterYear);
+                renderMonthlyCategoryBreakdown(breakdownFilterYear, breakdownFilterMonth);
+            });
+        }
+
+        function renderYearButtons(containerDiv, currentFilter, clickHandler) {
+            containerDiv.innerHTML = '';
+            const allYears = getUniqueYearsFromHistory();
+            const allBtn = document.createElement('button');
+            allBtn.className = `btn ${currentFilter === null ? 'btn-primary' : 'btn-secondary'} mr-2`;
+            allBtn.textContent = 'All Years';
+            allBtn.addEventListener('click', () => clickHandler(null));
+            containerDiv.appendChild(allBtn);
+
+            allYears.forEach(year => {
+                const yearBtn = document.createElement('button');
+                yearBtn.className = `btn ${currentFilter === year ? 'btn-primary' : 'btn-secondary'} mr-2`;
+                yearBtn.textContent = year;
+                yearBtn.addEventListener('click', () => clickHandler(year));
+                containerDiv.appendChild(yearBtn);
+            });
+        }
+
+        function renderMonthSelect(selectElement, year, currentFilter, changeHandler) {
+            selectElement.innerHTML = '';
+            const allMonthsOption = document.createElement('option');
+            allMonthsOption.value = "";
+            allMonthsOption.textContent = "All Months";
+            selectElement.appendChild(allMonthsOption);
+
+            const months = getUniqueMonthsForYear(year);
+
+            months.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month;
+                option.textContent = month;
+                if (currentFilter === month) {
+                    option.selected = true;
+                }
+                selectElement.appendChild(option);
+            });
+
+            if (currentFilter) {
+                selectElement.value = currentFilter;
+            } else {
+                selectElement.value = "";
+            }
+
+            selectElement.removeEventListener('change', selectElement.__changeHandler__);
+            selectElement.__changeHandler__ = (event) => changeHandler(event.target.value === "" ? null : event.target.value);
+            selectElement.addEventListener('change', selectElement.__changeHandler__);
+        }
+
+        function saveCurrentExpenses() {
+            localStorage.setItem(LOCAL_STORAGE_DAILY_DRAFT_KEY, JSON.stringify(currentExpenses));
+            showMessageBox("Daily expenses saved successfully!");
+        }
+
+        function renderMonthlyCategoryBreakdown(filterYear = null, filterMonth = null) {
+            monthlyCategoryBreakdownContentDiv.innerHTML = '';
+
+            let filteredHistory = expenseHistory;
+
+            if (filterYear) {
+                filteredHistory = filteredHistory.filter(entry => {
+                    const [, , entryYear] = entry.date.split('/');
+                    return entryYear === filterYear;
+                });
+            }
+
+            if (filterMonth) {
+                filteredHistory = filteredHistory.filter(entry => {
+                    const [monthNum, , entryYear] = entry.date.split('/');
+                    const dateObj = new Date(parseInt(entryYear), parseInt(monthNum) - 1, 1);
+                    const entryMonthName = dateObj.toLocaleDateString('en-US', { month: 'long' });
+                    return entryMonthName === filterMonth;
+                });
+            }
+
+            if (filteredHistory.length === 0) {
+                noMonthlyBreakdownMessage.style.display = 'block';
+                return;
+            } else {
+                 noMonthlyBreakdownMessage.style.display = 'none';
+            }
+
+            const categoryTotals = {};
+
+            filteredHistory.forEach(entry => {
+                entry.dailyExpenses.forEach(item => {
+                    if (item.type && item.amount !== undefined) {
+                        categoryTotals[item.type] = (categoryTotals[item.type] || 0) + item.amount;
+                    }
+                });
+            });
+
+            const sortedCategories = Object.keys(categoryTotals).sort();
+
+            let tableHtml = `
+                <div class="grid grid-cols-2 grid-cols-2-breakdown table-header">
+                    <div class="text-left">Category</div>
+                    <div class="text-right">Amount (PHP)</div>
+                </div>
+                <div class="overflow-y-auto" style="max-height: 250px;">`;
+
+            if (sortedCategories.length === 0) {
+                tableHtml += `<div class="py-4 text-center text-gray-500">No category data for the selected period.</div>`;
+            } else {
+                let breakdownGrandTotal = 0;
+                sortedCategories.forEach(cat => {
+                    const amount = categoryTotals[cat];
+                    tableHtml += `
+                        <div class="grid grid-cols-2 grid-cols-2-breakdown table-row-item">
+                            <div class="text-left">${cat}</div>
+                            <div class="text-right">${formatCurrency(amount)}</div>
+                        </div>`;
+                    breakdownGrandTotal += amount;
+                });
+
+                tableHtml += `
+                    <div class="total-row-breakdown">
+                        <div class="text-left">TOTAL</div>
+                        <div class="text-right">${formatCurrency(breakdownGrandTotal)}</div>
+                    </div>
+                `;
+            }
+            monthlyCategoryBreakdownContentDiv.innerHTML = tableHtml;
+        }
+
+        function showConfirmModal(message, onConfirm, onCancel) {
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+            modalOverlay.innerHTML = `
+                <div class="modal-content">
+                    <p class="text-lg font-semibold mb-4">${message}</p>
+                    <div class="modal-buttons">
+                        <button id="confirmModalBtn" class="btn btn-primary">Yes</button>
+                        <button id="cancelModalBtn" class="btn btn-secondary">No</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalOverlay);
+
+            dailyExpensesSection.classList.add('daily-expenses-disabled');
+
+            document.getElementById('confirmModalBtn').addEventListener('click', () => {
+                onConfirm();
+                modalOverlay.remove();
+                dailyExpensesSection.classList.remove('daily-expenses-disabled');
+            });
+            document.getElementById('cancelModalBtn').addEventListener('click', () => {
+                if (onCancel) onCancel();
+                modalOverlay.remove();
+                dailyExpensesSection.classList.remove('daily-expenses-disabled');
+            });
+        }
+
+        function refreshDailyExpensesTable() {
+            expenseInputsDiv.innerHTML = '';
+            addExpenseRow();
+            calculateTotal();
+            localStorage.removeItem(LOCAL_STORAGE_DAILY_DRAFT_KEY);
+        }
+
+        function clearAllSavedData() {
+            showConfirmModal("Are you sure you want to clear ALL saved data (daily draft, history, and categories)? This cannot be undone.", () => {
+                localStorage.clear();
+                expenseHistory = [];
+                expenseCategories = [];
+                currentExpenses = [];
+                refreshDailyExpensesTable();
+                
+                renderCategoryList();
+                renderDailyHistoryYearButtons();
+                renderDailyHistoryMonthSelect(null);
+                renderExpenseHistory();
+
+                renderBreakdownYearButtons();
+                renderBreakdownMonthSelect(null);
+                renderMonthlyCategoryBreakdown();
+                
+                showMessageBox("All saved data has been cleared!");
+            });
+        }
+
+        function showMessageBox(message) {
+            const messageBox = document.createElement('div');
+            messageBox.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            messageBox.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full">
+                    <p class="text-lg font-semibold mb-4">${message}</p>
+                    <button id="closeMessageBox" class="btn btn-primary">OK</button>
+                </div>
+            `;
+            document.body.appendChild(messageBox);
+
+            document.getElementById('closeMessageBox').addEventListener('click', () => {
+                messageBox.remove();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedCategories = localStorage.getItem(LOCAL_STORAGE_CATEGORIES_KEY);
+            if (savedCategories) {
+                try {
+                    expenseCategories = JSON.parse(savedCategories);
+                } catch (e) {
+                    console.error("Error parsing saved categories from local storage:", e);
+                    expenseCategories = [];
+                }
+            }
+            renderCategoryList();
+
+            const savedHistory = localStorage.getItem(LOCAL_STORAGE_EXPENSE_HISTORY_KEY);
+            if (savedHistory) {
+                try {
+                    expenseHistory = JSON.parse(savedHistory);
+                } catch (e) {
+                    console.error("Error parsing expense history from local storage:", e);
+                    expenseHistory = [];
+                }
+            }
+
+            const savedDraft = localStorage.getItem(LOCAL_STORAGE_DAILY_DRAFT_KEY);
+            if (savedDraft) {
+                try {
+                    const loadedExpenses = JSON.parse(savedDraft);
+                    if (loadedExpenses.length > 0) {
+                        expenseInputsDiv.innerHTML = '';
+                        loadedExpenses.forEach(exp => {
+                            addExpenseRow(exp.type, exp.amount);
+                        });
+                        calculateTotal();
+                    } else {
+                        addExpenseRow();
+                    }
+                } catch (e) {
+                    console.error("Error parsing daily expenses draft from local storage:", e);
+                    addExpenseRow();
+                }
+            } else {
+                addExpenseRow();
+            }
+            calculateTotal();
+
+            renderDailyHistoryYearButtons();
+            renderDailyHistoryMonthSelect(dailyHistoryFilterYear);
+            renderExpenseHistory(dailyHistoryFilterYear, dailyHistoryFilterMonth);
+
+            renderBreakdownYearButtons();
+            renderBreakdownMonthSelect(breakdownFilterYear);
+            renderMonthlyCategoryBreakdown(breakdownFilterYear, breakdownFilterMonth);
+        });
+
+        addExpenseBtn.addEventListener('click', () => addExpenseRow());
+        saveDraftBtn.addEventListener('click', saveCurrentExpenses);
+        addCategoryBtn.addEventListener('click', () => {
+            const newCategory = newCategoryInput.value.trim();
+            if (newCategory && !expenseCategories.includes(newCategory)) {
+                expenseCategories.push(newCategory);
+                expenseCategories.sort();
+                localStorage.setItem(LOCAL_STORAGE_CATEGORIES_KEY, JSON.stringify(expenseCategories));
+                newCategoryInput.value = '';
+                renderCategoryList();
+                updateAllExpenseTypeDropdowns();
+
+                renderDailyHistoryYearButtons();
+                renderDailyHistoryMonthSelect(dailyHistoryFilterYear);
+                renderExpenseHistory(dailyHistoryFilterYear, dailyHistoryFilterMonth);
+
+                renderBreakdownYearButtons();
+                renderBreakdownMonthSelect(breakdownFilterYear);
+                renderMonthlyCategoryBreakdown(breakdownFilterYear, breakdownFilterMonth);
+
+            } else if (newCategory && expenseCategories.includes(newCategory)) {
+                showMessageBox("Category already exists!");
+            } else {
+                showMessageBox("Please enter a category name.");
+            }
+        });
+
+        clearAllDataBtn.addEventListener('click', clearAllSavedData);
+
+        submitBtn.addEventListener('click', () => {
+            const total = parseFloat(totalExpensesSpan.textContent.replace('₱', '').replace(/,/g, '')) || 0;
+            const validDailyExpenses = currentExpenses.filter(item => item.type && item.amount !== 0 && item.type !== "");
+
+            if (total > 0 && validDailyExpenses.length > 0) {
+                showConfirmModal("Are you sure you want to submit your expenses for today?", () => {
+                    const now = new Date();
+                    const dateString = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}/${now.getFullYear()}`;
+
+                    expenseHistory.push({
+                        date: dateString,
+                        total: total,
+                        dailyExpenses: JSON.parse(JSON.stringify(validDailyExpenses))
+                    });
+                    localStorage.setItem(LOCAL_STORAGE_EXPENSE_HISTORY_KEY, JSON.stringify(expenseHistory));
+
+                    renderDailyHistoryYearButtons();
+                    renderDailyHistoryMonthSelect(dailyHistoryFilterYear);
+                    renderExpenseHistory(dailyHistoryFilterYear, dailyHistoryFilterMonth);
+
+                    renderBreakdownYearButtons();
+                    renderBreakdownMonthSelect(breakdownFilterYear);
+                    renderMonthlyCategoryBreakdown(breakdownFilterYear, breakdownFilterMonth);
+
+                    refreshDailyExpensesTable();
+                    showMessageBox("Expenses submitted successfully!");
+                });
+            } else {
+                showMessageBox("No valid expenses to submit. Please select a type and enter an amount for at least one entry.");
+            }
+        });
+
+        refreshBtn.addEventListener('click', () => {
+            refreshDailyExpensesTable();
+            showMessageBox("Daily expenses cleared.");
+        });
+    </script>
+</body>
+</html>
